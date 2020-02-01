@@ -1,14 +1,12 @@
-This PHP package skeleton is inspired by the awesome [Spatie Package](https://github.com/spatie/skeleton-php) 
+# Gemz Http-Client
 
-# Very short description of the package
-
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/gemzio/http-client.svg?style=flat-square)](https://packagist.org/packages/gemzio/:package_name)
-[![GitHub Tests Action Status](https://img.shields.io/github/workflow/status/gemzio/http-client/run-tests?label=tests)](https://github.com/gemzio/:package_name/actions?query=workflow%3Arun-tests+branch%3Amaster)
-[![Quality Score](https://img.shields.io/scrutinizer/g/gemzio/http-client.svg?style=flat-square)](https://scrutinizer-ci.com/g/gemzio/:package_name)
-[![Total Downloads](https://img.shields.io/packagist/dt/gemzio/http-client.svg?style=flat-square)](https://packagist.org/packages/gemzio/:package_name)
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/gemzio/http-client.svg?style=flat-square)](https://packagist.org/packages/gemzio/http-client)
+[![GitHub Tests Action Status](https://img.shields.io/github/workflow/status/gemzio/http-client/run-tests?label=tests)](https://github.com/gemzio/http-client/actions?query=workflow%3Arun-tests+branch%3Amaster)
+[![Quality Score](https://img.shields.io/scrutinizer/g/gemzio/http-client.svg?style=flat-square)](https://scrutinizer-ci.com/g/gemzio/http-client)
+[![Total Downloads](https://img.shields.io/packagist/dt/gemzio/http-client.svg?style=flat-square)](https://packagist.org/packages/gemzio/http-client)
 
 
-This is where your description should go. Try and limit it to a paragraph or two. Consider adding a small example.
+Gemz Http Client is a simple Symfony Http-Client wrapper to provide an easy development experience for most use cases.
 
 ## Installation
 
@@ -21,8 +19,53 @@ composer require gemz/http-client
 ## Usage
 
 ``` php
-$skeleton = new Gemz\Skeleton();
-echo $skeleton->echoPhrase('Hello, gemz!');
+use Gemz\HttpClient\Client;
+
+$config = Config::build()
+    ->useProxy()
+    ->verifySsl(false)
+    ->maxRedirects()
+    ->timeout()
+    ->authBasic()
+    ->authBearer()
+    ->authDigest()
+    ->header($key, $value)
+    ->baseUri($uri);
+
+$client = Client::create($config);
+
+$client->config()->header(key, value);
+
+$response = $client
+    ->ignoreConfig()
+    ->queryParam($key, $value)
+    ->queryParams(array $params)
+    ->payload()
+    ->put($endpoint)
+    ->get($endpoint)
+    ->request($method, $endpoint);
+
+$client = Client::
+    ->withBaseUri($url)
+    ->withBearerAuth($token)
+    ->withBasicAuth($username, $password)
+    ->withDigestAuth($username, $password)
+    ->withHeader($key, $value)
+    ->withHeaders([$key => $value])
+    ->withQueryParam($key, $value)
+    ->withQueryParams([$key => $value])
+    ->timeout()
+    ->maxRedirects(5)
+    ->withCookies()
+    ->withOption($key, $value)
+    ->withOptions(['proxy' => $proxy])
+    ->get($endpoint)
+    ->put($endpoint)
+    ->post($endpoint)
+    ->delete($endpoint)
+    ->patch($endpoint)
+
+
 ```
 
 ### Testing
@@ -47,7 +90,6 @@ If you discover any security related issues, please email stefan@sriehl.com inst
 ## Credits
 
 - [Stefan Riehl](https://github.com/stefanriehl)
-- [All Contributors](../../contributors)
 
 ## Support us
 
