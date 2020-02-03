@@ -8,6 +8,9 @@
 
 Gemz Http Client is a simple Symfony Http-Client wrapper to provide an easy development experience for most use cases.
 
+If you need more functionality, just use (Guzzle)[https://github.com/guzzle/guzzle] or 
+(Symfony)[https://github.com/symfony/http-client] clients.
+
 ## Installation
 
 You can install the package via composer:
@@ -16,66 +19,191 @@ You can install the package via composer:
 composer require gemz/http-client
 ```
 
-## Usage
+## Instantiation
 
-``` php
-use Gemz\HttpClient\Client;
+```php
+use Gemz\HttpCLient\Client;
 
-$config = Config::build()
-    ->useProxy()
-    ->verifySsl(false)
-    ->maxRedirects()
-    ->timeout()
-    ->authBasic()
-    ->authBearer()
-    ->authDigest()
-    ->header($key, $value)
-    ->baseUri($uri);
+// client
+$client = Client::create();
+$client = new Client();
 
+// with configuration options
+$config = Config::build()->baseUri('https://myapi.com');
 $client = Client::create($config);
 
-$client->config()->header(key, value);
+$response = $client->get('users');
+echo $response->status();
+```
 
+## Basic Usage
+
+You can configure the client with initial values. Configuration options are valid for all requests made with the 
+client object unless you override the options.
+
+```php
+use Gemz\HttpCLient\Client;
+use Gemz\HttpCLient\Config;
+
+$config = Config::build()
+    ->timeout(1.5)
+    ->header('x-api-key', 'myapikey')
+    ->authBasic('username', 'password')
+    ->baseUri('https://myapi.com');
+ 
+$client = Client::create($config);
+
+$response = $client->get('users');
+
+// you can override all values from config
 $response = $client
-    ->ignoreConfig()
-    ->queryParam($key, $value)
-    ->queryParams(array $params)
-    ->payload()
-    ->put($endpoint)
-    ->get($endpoint)
-    ->request($method, $endpoint);
+    ->timeout(5.5)
+    ->get('users');
+```
 
-$client = Client::
-    ->withBaseUri($url)
-    ->withBearerAuth($token)
-    ->withBasicAuth($username, $password)
-    ->withDigestAuth($username, $password)
-    ->withHeader($key, $value)
-    ->withHeaders([$key => $value])
-    ->withQueryParam($key, $value)
-    ->withQueryParams([$key => $value])
-    ->timeout()
-    ->maxRedirects(5)
-    ->withCookies()
-    ->withOption($key, $value)
-    ->withOptions(['proxy' => $proxy])
-    ->get($endpoint)
-    ->put($endpoint)
-    ->post($endpoint)
-    ->delete($endpoint)
-    ->patch($endpoint)
+> The only default option is content-type => application/json
 
+## Request And Configuration Options
+
+> Be aware that all requests are made `asynchronous`.
+
+```php
+// authentication
+// password in auth basic is optional
+$client->authBasic('<username', '<password');
+$client->authBearer('<token');
+
+// headers
+$client->header('<key>', '<value');
+$client->headers(['<key>' => 'value']);
+
+// content type
+$client->contentType('<contentType');
+
+// useragent
+$client->userAgent('<userAgent');
+
+// query params
+$client->queryParam('<key>', '<value');
+$client->queryParams(['<key>' => 'value']);
+
+// timeout
+$client->timeout(<float>);
+
+// max redirects - 0 means unlimited
+$client->maxRedirects(<integer>);
+
+// max request <-> response duration
+$client->maxDuration(<float>);
+
+// throw errors if response is different than 200 - 299 status code
+$client->throwErrors();
+
+// ignores the configuration settings
+$client->ignoreConfig(); 
+
+// body format
+$client->asJson(); // default
+$client->asFormParams();
+$client->asMultipart();
+$client->asPlain();
+
+// payload - depends on body format
+// multipart form data will automatically transformed in the correct format
+$client->payload(['<key>' => '<value']);
+$client->payload('my message');
+
+// without verifing ssl
+$client->withoutVerifying();
+
+// methods
+$client->get('users/1');
+$client->post('users');
+$client->put('users/1');
+$client->patch('users/1');
+$client->delete('users/1');
+
+// Symfony client options
+$client->option('<key', '<value');
+```
+
+## Response
+
+```php
+$response = $client->get('users/1');
+
+// requests are fully asynchron unless you read the content, headers or status code of the response 
+
+// content access
+$response->asArray();
+$response->asObject();
+$response->asCollection(); // illuminate collection
+$response->asString();
+$response->body();
+
+// status code
+$response->status();
+
+// true / false
+$response->isOk();
+$response->isSuccess();
+$response->isRedirect();
+$response->isClientError();
+$response->isServerError();
+
+// headers
+$response->header('content-type');
+$response->headers();
+$response->contentType();
+$response->isJson();
+
+// request url
+$response->requestUrl();
+
+// execution time
+$response->executionTime();
+
+// custom data
+// the data from request custom data 
+$response->customData();
+
+// response infos
+// returns info coming from the transport layer, such as "response_headers",
+// "redirect_count", "start_time", "redirect_url", etc.
+$response->info();
+
+// symmfony response object
+$response->response();
 
 ```
 
-### Testing
+## Asynchronous Requests
+
+```php
+$client = Client::create(Config::build()->baseUri('https://myapi.com'));
+
+$responses = [];
+
+for ($i = 0; $i < 100; $i++) {
+    $responses[] = $client->get("users/{$i}");
+}
+
+foreach ($responses as $response) {
+    // ...
+    $content = $response->asArray();
+    // ...
+}
+
+``` 
+
+## Testing
 
 ``` bash
 composer test
 composer test-coverage
 ```
 
-### Changelog
+## Changelog
 
 Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
 
@@ -83,7 +211,7 @@ Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed re
 
 Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
 
-### Security
+## Security
 
 If you discover any security related issues, please email stefan@sriehl.com instead of using the issue tracker.
 

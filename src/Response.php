@@ -223,11 +223,11 @@ class Response
     }
 
     /**
-     * @return string
+     * @return float
      */
-    public function executionTime(): string
+    public function executionTime(): float
     {
-        return $this->info()['total_time'] ?: '';
+        return $this->info()['total_time'] ?: 0;
     }
 
     /**

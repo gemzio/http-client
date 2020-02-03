@@ -136,6 +136,19 @@ class Client
     }
 
     /**
+     * Yields responses chunk by chunk as they complete.
+     *
+     * @param ResponseInterface|ResponseInterface[]|iterable $responses One or more responses created by the current HTTP client
+     * @param float|null $timeout The idle timeout before yielding timeout chunks
+     *
+     * @return ResponseStreamInterface
+     */
+    public function stream($responses, $timeout = null)
+    {
+        return $this->client->stream($responses, $timeout);
+    }
+
+    /**
      * Handles the request
      *
      * @param string $method
