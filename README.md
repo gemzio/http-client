@@ -8,8 +8,8 @@
 
 Gemz Http Client is a simple Symfony Http-Client wrapper to provide an easy development experience for most use cases.
 
-If you need more functionality, just use (Guzzle)[https://github.com/guzzle/guzzle] or 
-(Symfony)[https://github.com/symfony/http-client] clients.
+If you need more functionality, just use [Guzzle](https://github.com/guzzle/guzzle) or 
+[Symfony](https://github.com/symfony/http-client) clients.
 
 ## Installation
 
