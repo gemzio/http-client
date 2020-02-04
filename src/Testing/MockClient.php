@@ -40,6 +40,7 @@ class MockClient extends Client
     {
         $info = array_merge($this->getConfig(), $this->mockInfo);
         $info['response_headers'] = array_merge($this->getConfig()['headers'], $this->options['headers']);
+
         return $info;
     }
 
@@ -48,8 +49,22 @@ class MockClient extends Client
         $client = new MockHttpClient($this->buildMockResponse(), $this->getBaseUri());
 
         return new Response(
-            $client->request($method, $endpoint, $this->options)
+            $client->request($method, $endpoint, $this->mergeConfigAndOptions())
         );
+    }
+
+    protected function mergeConfigAndOptions()
+    {
+        $headers = array_merge($this->getConfig()['headers'] ?: [], $this->options['headers'] ?: []);
+        $options = array_merge($this->getConfig(), $this->options);
+        $options['headers'] = $headers;
+
+        return $options;
+    }
+
+    public function getRequestOptions()
+    {
+        return $this->mergeConfigAndOptions();
     }
 
     protected function getBaseUri(): string

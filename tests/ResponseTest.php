@@ -98,7 +98,8 @@ class ResponseTest extends TestCase
         $client = new MockClient(Config::build()->baseUri('http://localhost.test'));
 
         $response = $client
-            ->mockResponse($body, $info)
+            ->mockInfo($info)
+            ->mockBody($body)
             ->get('tests');
 
         $this->assertEquals($response->body(), 'this is a test');
@@ -114,7 +115,8 @@ class ResponseTest extends TestCase
         $client = new MockClient(Config::build()->baseUri('http://localhost.test'));
 
         $response = $client
-            ->mockResponse($body, $info)
+            ->mockBody($body)
+            ->mockInfo($info)
             ->get('tests');
 
         $this->assertTrue(is_object($response->asObject()));
@@ -129,7 +131,8 @@ class ResponseTest extends TestCase
         $client = new MockClient(Config::build()->baseUri('http://localhost.test'));
 
         $response = $client
-            ->mockResponse($body, $info)
+            ->mockBody($body)
+            ->mockInfo($info)
             ->get('tests');
 
         $this->assertTrue(is_array($response->asArray()));
@@ -144,7 +147,8 @@ class ResponseTest extends TestCase
         $client = new MockClient(Config::build()->baseUri('http://localhost.test'));
 
         $response = $client
-            ->mockResponse($body, $info)
+            ->mockBody($body)
+            ->mockInfo($info)
             ->get('tests');
 
         $this->assertTrue(is_array($response->asCollection()->toArray()));
@@ -159,7 +163,8 @@ class ResponseTest extends TestCase
         $client = new MockClient(Config::build()->baseUri('http://localhost.test'));
 
         $response = $client
-            ->mockResponse($body, $info)
+            ->mockBody($body)
+            ->mockInfo($info)
             ->header('content-type', 'application/json')
             ->get('tests');
 
@@ -176,7 +181,8 @@ class ResponseTest extends TestCase
 
         // string
         $response = $client
-            ->mockResponse($body, $info)
+            ->mockBody($body)
+            ->mockInfo($info)
             ->customData('test')
             ->get('tests');
 
@@ -184,7 +190,8 @@ class ResponseTest extends TestCase
 
         // array
         $response = $client
-            ->mockResponse($body, $info)
+            ->mockBody($body)
+            ->mockInfo($info)
             ->customData(['test'])
             ->get('tests');
 
