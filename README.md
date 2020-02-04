@@ -1,9 +1,9 @@
 # Gemz Http-Client
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/gemzio/http-client.svg?style=flat-square)](https://packagist.org/packages/gemzio/http-client)
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/gemz/http-client.svg?style=flat-square)](https://packagist.org/packages/gemz/http-client)
 [![GitHub Tests Action Status](https://img.shields.io/github/workflow/status/gemzio/http-client/run-tests?label=tests)](https://github.com/gemzio/http-client/actions?query=workflow%3Arun-tests+branch%3Amaster)
 [![Quality Score](https://img.shields.io/scrutinizer/g/gemzio/http-client.svg?style=flat-square)](https://scrutinizer-ci.com/g/gemzio/http-client)
-[![Total Downloads](https://img.shields.io/packagist/dt/gemzio/http-client.svg?style=flat-square)](https://packagist.org/packages/gemzio/http-client)
+[![Total Downloads](https://img.shields.io/packagist/dt/gemz/http-client.svg?style=flat-square)](https://packagist.org/packages/gemz/http-client)
 
 
 Gemz Http Client is a simple Symfony Http-Client wrapper to provide an easy development experience for most use cases.
