@@ -11,16 +11,22 @@ class Config
     /** @var array<mixed> */
     protected $options = [];
 
+    /** @var string */
+    protected $bodyFormat = 'json';
+
+    /** @var bool */
+    protected $throwErrors = false;
+
     /**
      * @return Config
      */
-    public static function build()
+    public static function make()
     {
         return new self();
     }
 
     /**
-     * Config constructor.
+     * Config constructor
      */
     public function __construct()
     {

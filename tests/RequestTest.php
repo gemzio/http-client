@@ -3,16 +3,107 @@
 namespace Gemz\HttpClient\Tests;
 
 use Gemz\HttpClient\Client;
+use Gemz\HttpClient\Response;
 use Gemz\HttpClient\Config;
+use Gemz\HttpClient\Stream;
 use Gemz\HttpClient\Testing\MockClient;
+use Illuminate\Support\Str;
 use PHPUnit\Framework\TestCase;
+
 
 class RequestTest extends TestCase
 {
+    protected $timer = [];
+    protected $urls = [
+        'https://api.leadmachine.dk/v1/users/?api_key=wpBV7vbzPOLduuAHfAdzT4mzxVVWySgElfFdH4Ec&access_token=QnM1NGdnM0JObW55WDl0Uk9kWW9adG04eTJiVUNUY2dCVDdVWWVZSA==%22',
+        'https://api.leadmachine.dk/v1/users/97fb4e7f38b75907bd4a0aaef7387d5f?api_key=wpBV7vbzPOLduuAHfAdzT4mzxVVWySgElfFdH4Ec&access_token=QnM1NGdnM0JObW55WDl0Uk9kWW9adG04eTJiVUNUY2dCVDdVWWVZSA==%22',
+        'https://api.leadmachine.dk/v1'
+    ];
+
+    protected $imgUrl = "https://http2.akamai.com/demo/tile-%s.png";
+
+    /** @test */
+    public function can_do_get_requests()
+    {
+        $response = Client::create()->get(sprintf($this->imgUrl, 8));
+
+        $this->assertEquals($response->status(), 200);
+    }
+
+    /** @test */
+    public function can_do_async_requests()
+    {
+        $client = Client::create();
+
+        $responses = [];
+
+        for ($i = 0; $i < 1; ++$i) {
+            $responses[] = $client
+                ->customData('req - ' . $i)
+                ->get(sprintf($this->imgUrl, $i));
+        }
+
+         foreach ($responses as $response) {
+             $this->assertEquals(200, $response->status());
+         }
+
+        $responses = [];
+
+        $responses['r2'] = $client->get(sprintf($this->imgUrl, 2));
+        $responses['r3'] = $client->get(sprintf($this->imgUrl, 3));
+        $responses['r4'] = $client->get(sprintf($this->imgUrl, 4));
+
+        foreach ($responses as $key => $response) {
+            $this->assertEquals(200, $response->status());
+            $this->assertTrue(Str::contains($key, 'r'));
+        }
+
+    }
+
+    /** @test */
+    public function can_do_stream_async_requests()
+    {
+        $client = Client::create();
+
+        $responses = [];
+
+        for ($i = 0; $i < 5; ++$i) {
+            $responses[] = $client
+                ->customData('req - ' . $i)
+                ->get(sprintf($this->imgUrl, $i));
+        }
+
+        foreach ($client->stream($responses) as $response => $chunk) {
+
+            Stream::from($response, $chunk)
+                ->then(function (Response $response) {
+                    $this->assertEquals(200, $response->status());
+                    $this->assertTrue(Str::contains($response->customData(), 'req - '));
+                })
+                ->timeout(function ($response) {})
+                ->catch(function ($exception) {});
+        }
+    }
+
+    protected function timer($text)
+    {
+        $times = count($this->timer);
+
+        if ($times == 0) {
+            $this->timer[$text] = round(microtime(true), 4);
+            return;
+        }
+
+        $lastTime = end($this->timer);
+
+        $this->timer[$text] = round(microtime(true),4) - $lastTime;
+        return;
+    }
+
     /** @test */
     public function can_add_query_params_to_request()
     {
-        $client = new MockClient(Config::build()->baseUri('http://myapi.com'));
+        $client = new MockClient(Config::make()->baseUri('http://myapi.com'));
 
         $client
             ->queryParam('id', 1)
@@ -28,7 +119,7 @@ class RequestTest extends TestCase
     /** @test */
     public function can_add_headers_to_request()
     {
-        $client = new MockClient(Config::build()
+        $client = new MockClient(Config::make()
             ->header('key', '1')
             ->baseUri('http://myapi.com'));
 
@@ -39,14 +130,14 @@ class RequestTest extends TestCase
         $this->assertArrayHasKey('headers', $client->getRequestOptions());
         $this->assertSame(
             $client->getRequestOptions()['headers'],
-            ['content-type' => 'application/json', 'key' => '2', 'filter' => 'test', 'page' => '10']
+            ['Content-Type' => 'application/json', 'key' => '2', 'filter' => 'test', 'page' => '10']
         );
     }
 
     /** @test */
     public function can_send_body_as_string()
     {
-        $client = new MockClient(Config::build()
+        $client = new MockClient(Config::make()
             ->baseUri('http://myapi.com'));
 
         $client
@@ -54,12 +145,7 @@ class RequestTest extends TestCase
             ->payload('test');
 
         $this->assertSame(
-            $client->getRequestOptions()['body'],
-            'test'
-        );
-
-        $this->assertSame(
-            $client->getRequestOptions()['headers']['content-type'],
+            $client->getRequestOptions()['headers']['Content-Type'],
             'text/plain'
         );
     }
@@ -67,7 +153,7 @@ class RequestTest extends TestCase
     /** @test */
     public function can_send_request_as_json()
     {
-        $client = new MockClient(Config::build()
+        $client = new MockClient(Config::make()
             ->baseUri('http://myapi.com'));
 
         $client
@@ -75,12 +161,7 @@ class RequestTest extends TestCase
             ->payload(['key' => 'test']);
 
         $this->assertSame(
-            $client->getRequestOptions()['json'],
-            ['key' => 'test']
-        );
-
-        $this->assertSame(
-            $client->getRequestOptions()['headers']['content-type'],
+            $client->getRequestOptions()['headers']['Content-Type'],
             'application/json'
         );
     }
@@ -88,13 +169,13 @@ class RequestTest extends TestCase
     /** @test */
     public function can_send_request_as_multipart()
     {
-        $client = new MockClient(Config::build()
+        $client = new MockClient(Config::make()
             ->baseUri('http://myapi.com'));
 
         $client->asMultipart();
 
         $this->assertSame(
-            $client->getRequestOptions()['headers']['content-type'],
+            $client->getRequestOptions()['headers']['Content-Type'],
             'multipart/form-data'
         );
     }
@@ -102,7 +183,7 @@ class RequestTest extends TestCase
     /** @test */
     public function can_send_request_as_form_params()
     {
-        $client = new MockClient(Config::build()
+        $client = new MockClient(Config::make()
             ->baseUri('http://myapi.com'));
 
         $client
@@ -110,15 +191,15 @@ class RequestTest extends TestCase
             ->payload(['filter' => 'test', 'page' => '10']);
 
         $this->assertSame(
-            $client->getRequestOptions()['body'],
-            ['filter' => 'test', 'page' => '10']
+            $client->getRequestOptions()['headers']['Content-Type'],
+            'application/x-www-form-urlencoded'
         );
     }
 
     /** @test */
     public function can_authenticate_with_basic()
     {
-        $client = new MockClient(Config::build()
+        $client = new MockClient(Config::make()
             ->baseUri('http://myapi.com'));
 
         $client
@@ -126,22 +207,21 @@ class RequestTest extends TestCase
 
         $this->assertSame(
             $client->getRequestOptions()['auth_basic'],
-            ['username', 'password']
+            'username:password'
         );
 
-        $client
-            ->authBasic('username');
+        $client->authBasic('username');
 
         $this->assertSame(
             $client->getRequestOptions()['auth_basic'],
-            ['username']
+            'username'
         );
     }
 
     /** @test */
     public function can_authenticate_with_bearer_token()
     {
-        $client = new MockClient(Config::build()
+        $client = new MockClient(Config::make()
             ->baseUri('http://myapi.com'));
 
         $client
@@ -156,7 +236,7 @@ class RequestTest extends TestCase
     /** @test */
     public function can_change_baseuri_with_request()
     {
-        $client = new MockClient(Config::build()
+        $client = new MockClient(Config::make()
             ->baseUri('http://myapi.com'));
 
         $client
@@ -171,12 +251,12 @@ class RequestTest extends TestCase
     /** @test */
     public function can_add_accept_header()
     {
-        $client = new MockClient(Config::build()
+        $client = new MockClient(Config::make()
             ->accept('application/json')
             ->baseUri('http://myapi.com'));
 
         $this->assertSame(
-            $client->getRequestOptions()['headers']['accept'],
+            $client->getRequestOptions()['headers']['Accept'],
             'application/json'
         );
     }
@@ -184,7 +264,7 @@ class RequestTest extends TestCase
     /** @test */
     public function can_add_custom_data_with_different_types()
     {
-        $client = new MockClient(Config::build()
+        $client = new MockClient(Config::make()
             ->baseUri('http://myapi.com'));
 
         // plain
@@ -212,24 +292,24 @@ class RequestTest extends TestCase
     /** @test */
     public function can_add_max_duration()
     {
-        $client = new MockClient(Config::build()
+        $client = new MockClient(Config::make()
             ->baseUri('http://myapi.com'));
 
         $client->maxDuration(20);
 
         $this->assertSame(
             $client->getRequestOptions()['max_duration'],
-            20
+            20.0
         );
     }
 
     /** @test */
     public function can_add_max_redirects()
     {
-        $client = new MockClient(Config::build()
+        $client = new MockClient(Config::make()
             ->baseUri('http://myapi.com'));
 
-        $client->maxRedirects(20);
+        $client->allowRedirects(20);
 
         $this->assertSame(
             $client->getRequestOptions()['max_redirects'],
@@ -240,7 +320,7 @@ class RequestTest extends TestCase
     /** @test */
     public function can_add_timeout()
     {
-        $client = new MockClient(Config::build()
+        $client = new MockClient(Config::make()
             ->baseUri('http://myapi.com'));
 
         $client->timeout(20);

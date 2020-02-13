@@ -2,7 +2,7 @@
 
 namespace Gemz\HttpClient;
 
-use Illuminate\Support\Str;
+use Illuminate\Support\Collection;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 class Response
@@ -14,8 +14,17 @@ class Response
     protected $throwErrors;
 
     /**
-     * Response constructor.
+     * @param ResponseInterface $response
+     * @param bool $throwErrors
      *
+     * @return Response
+     */
+    public static function createFromResponse(ResponseInterface $response, $throwErrors = false)
+    {
+        return new self($response, $throwErrors);
+    }
+
+    /**
      * @param ResponseInterface $response
      * @param bool $throwErrors
      */
@@ -27,7 +36,6 @@ class Response
 
     /**
      * @return int
-     *
      * @throws \Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface
      */
     public function status(): int
@@ -37,7 +45,6 @@ class Response
 
     /**
      * @return bool
-     *
      * @throws \Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface
      */
     public function isSuccess(): bool
@@ -47,7 +54,6 @@ class Response
 
     /**
      * @return bool
-     *
      * @throws \Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface
      */
     public function isOk(): bool
@@ -57,7 +63,6 @@ class Response
 
     /**
      * @return bool
-     *
      * @throws \Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface
      */
     public function isRedirect(): bool
@@ -67,7 +72,6 @@ class Response
 
     /**
      * @return bool
-     *
      * @throws \Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface
      */
     public function isClientError(): bool
@@ -77,7 +81,6 @@ class Response
 
     /**
      * @return bool
-     *
      * @throws \Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface
      */
     public function isServerError(): bool
@@ -95,7 +98,6 @@ class Response
 
     /**
      * @return string
-     *
      * @throws \Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface
      * @throws \Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface
      * @throws \Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface
@@ -108,7 +110,6 @@ class Response
 
     /**
      * @return string
-     *
      * @throws \Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface
      * @throws \Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface
      * @throws \Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface
@@ -121,7 +122,6 @@ class Response
 
     /**
      * @return mixed
-     *
      * @throws \Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface
      * @throws \Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface
      * @throws \Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface
@@ -133,14 +133,14 @@ class Response
     }
 
     /**
-     * @return \Illuminate\Support\Collection<String|Array>
+     * @return \Illuminate\Support\Collection<mixed>
      *
      * @throws \Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface
      * @throws \Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface
      * @throws \Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface
      * @throws \Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface
      */
-    public function asCollection()
+    public function asCollection(): Collection
     {
         return collect($this->asArray());
     }
@@ -159,6 +159,18 @@ class Response
     }
 
     /**
+     * @return resource
+     */
+    public function toStream()
+    {
+        if (method_exists($this->response, 'toStream')) {
+            return $this->response->toStream($this->throwErrors);
+        }
+
+        throw new \BadMethodCallException('method toStream does not exists');
+    }
+
+    /**
      * @return bool
      *
      * @throws \Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface
@@ -166,7 +178,7 @@ class Response
      * @throws \Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface
      * @throws \Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface
      */
-    public function isJson()
+    public function isJson(): bool
     {
         return $this->contentType() == 'application/json';
     }
@@ -182,24 +194,11 @@ class Response
      */
     public function header(string $header)
     {
-        if (array_key_exists(Str::lower($header), $this->headers())) {
+        if (array_key_exists($header, $this->headers())) {
             return $this->headers()[$header];
         }
 
         return '';
-    }
-
-    /**
-     * @return array<mixed>
-     *
-     * @throws \Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface
-     * @throws \Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface
-     * @throws \Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface
-     * @throws \Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface
-     */
-    public function headers()
-    {
-        return $this->normalizeHeaders($this->response->getHeaders($this->throwErrors));
     }
 
     /**
@@ -209,13 +208,26 @@ class Response
      */
     protected function normalizeHeaders(array $headers)
     {
-        return collect($headers)->transform(function($item, $key) {
+        return collect($headers)->transform(function ($item, $key) {
             return $item[0];
         })->all();
     }
 
     /**
-     * @return mixed
+     * @return array<String>
+     *
+     * @throws \Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface
+     * @throws \Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface
+     * @throws \Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface
+     * @throws \Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface
+     */
+    public function headers(): array
+    {
+        return $this->normalizeHeaders($this->response->getHeaders());
+    }
+
+    /**
+     * @return string
      */
     public function requestUrl(): string
     {
@@ -227,7 +239,7 @@ class Response
      */
     public function executionTime(): float
     {
-        return $this->info()['total_time'] ?: 0;
+        return $this->info()['total_time'] ?: 0.0;
     }
 
     /**
@@ -235,7 +247,15 @@ class Response
      */
     public function customData()
     {
-        return $this->info()['user_data'] ?? '';
+        return $this->info()['user_data'];
+    }
+
+    /**
+     * @return array|mixed|null
+     */
+    public function info()
+    {
+        return $this->response->getInfo();
     }
 
     /**
@@ -252,10 +272,15 @@ class Response
     }
 
     /**
-     * @return array|mixed|null
+     * @return mixed|string
+     *
+     * @throws \Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface
+     * @throws \Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface
+     * @throws \Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface
+     * @throws \Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface
      */
-    public function info()
+    public function userAgent()
     {
-        return $this->response->getInfo();
+        return $this->header('user-agent');
     }
 }

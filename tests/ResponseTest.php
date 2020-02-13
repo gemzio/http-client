@@ -95,7 +95,7 @@ class ResponseTest extends TestCase
         $body = 'this is a test';
         $info = ['http_code' => 200];
 
-        $client = new MockClient(Config::build()->baseUri('http://localhost.test'));
+        $client = new MockClient(Config::make()->baseUri('http://localhost.test'));
 
         $response = $client
             ->mockInfo($info)
@@ -112,7 +112,7 @@ class ResponseTest extends TestCase
         $body = '{"id" : 1, "users" : [{"id" : 1}, {"id" : 2}]}';
         $info = ['http_code' => 200];
 
-        $client = new MockClient(Config::build()->baseUri('http://localhost.test'));
+        $client = new MockClient(Config::make()->baseUri('http://localhost.test'));
 
         $response = $client
             ->mockBody($body)
@@ -128,7 +128,7 @@ class ResponseTest extends TestCase
         $body = '{"id" : 1, "users" : [{"id" : 1}, {"id" : 2}]}';
         $info = ['http_code' => 200];
 
-        $client = new MockClient(Config::build()->baseUri('http://localhost.test'));
+        $client = new MockClient(Config::make()->baseUri('http://localhost.test'));
 
         $response = $client
             ->mockBody($body)
@@ -144,7 +144,7 @@ class ResponseTest extends TestCase
         $body = '{"id" : 1, "users" : [{"id" : 1}, {"id" : 2}]}';
         $info = ['http_code' => 200];
 
-        $client = new MockClient(Config::build()->baseUri('http://localhost.test'));
+        $client = new MockClient(Config::make()->baseUri('http://localhost.test'));
 
         $response = $client
             ->mockBody($body)
@@ -160,7 +160,7 @@ class ResponseTest extends TestCase
         $body = '{"id" : 1, "users" : [{"id" : 1}, {"id" : 2}]}';
         $info = ['http_code' => 200, 'response_headers' => ['content-type' => 'application/json']];
 
-        $client = new MockClient(Config::build()->baseUri('http://localhost.test'));
+        $client = new MockClient(Config::make()->baseUri('http://localhost.test'));
 
         $response = $client
             ->mockBody($body)
@@ -177,7 +177,7 @@ class ResponseTest extends TestCase
         $body = '{"id" : 1, "users" : [{"id" : 1}, {"id" : 2}]}';
         $info = ['http_code' => 200, 'response_headers' => ['content-type' => 'application/json']];
 
-        $client = new MockClient(Config::build()->baseUri('http://localhost.test'));
+        $client = new MockClient(Config::make()->baseUri('http://localhost.test'));
 
         // string
         $response = $client

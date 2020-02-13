@@ -4,13 +4,15 @@ namespace Gemz\HttpClient;
 
 use Gemz\HttpClient\Contracts\Options;
 use Symfony\Component\HttpClient\HttpClient;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 use Symfony\Contracts\HttpClient\ResponseStreamInterface;
 
 class Client
 {
     use Options;
 
-    /** @var \Symfony\Contracts\HttpClient\HttpClientInterface */
+    /** @var HttpClientInterface */
     protected $client;
 
     /** @var Config|null */
@@ -19,8 +21,8 @@ class Client
     /** @var array<mixed> */
     protected $options = [];
 
-    /** @var bool */
-    protected $ignoreConfig = false;
+    /** @var string */
+    protected $bodyFormat = 'json';
 
     /** @var bool */
     protected $throwErrors = false;
@@ -36,14 +38,14 @@ class Client
     }
 
     /**
-     * Client constructor.
-     *
      * @param Config|null $config
      */
     public function __construct(Config $config = null)
     {
         $this->config = $config ?: new Config();
-        $this->transferContentTypeFromConfig();
+
+        $this->transferBodyFormatFromConfig();
+        $this->transferThrowErrorsFromConfig();
 
         $this->client = $this->buildClient();
     }
@@ -51,29 +53,28 @@ class Client
     /**
      * @return $this
      */
-    protected function transferContentTypeFromConfig(): self
+    protected function transferThrowErrorsFromConfig(): self
     {
-        return $this->contentType(
-            $this->config->getContentType()
-        );
-    }
-
-    /**
-     * Ignores the config settings
-     *
-     * @return $this
-     */
-    public function ignoreConfig(): self
-    {
-        $this->ignoreConfig = true;
+        $this->throwErrors = $this->config->shouldThrowErrors();
 
         return $this;
     }
 
     /**
+     * @return $this
+     */
+    protected function transferBodyFormatFromConfig(): self
+    {
+        return $this->bodyFormat(
+            $this->config->getBodyFormat()
+        );
+    }
+
+    /**
      * @param string $endpoint
      *
-     * @return Response
+     * @return Response|mixed
+     *
      * @throws \Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface
      */
     public function get(string $endpoint)
@@ -84,7 +85,20 @@ class Client
     /**
      * @param string $endpoint
      *
-     * @return Response
+     * @return Response|mixed
+     *
+     * @throws \Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface
+     */
+    public function head(string $endpoint)
+    {
+        return $this->request('HEAD', $endpoint);
+    }
+
+    /**
+     * @param string $endpoint
+     *
+     * @return Response|mixed
+     *
      * @throws \Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface
      */
     public function post(string $endpoint)
@@ -95,7 +109,8 @@ class Client
     /**
      * @param string $endpoint
      *
-     * @return Response
+     * @return Response|mixed
+     *
      * @throws \Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface
      */
     public function put(string $endpoint)
@@ -106,7 +121,8 @@ class Client
     /**
      * @param string $endpoint
      *
-     * @return Response
+     * @return Response|mixed
+     *
      * @throws \Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface
      */
     public function patch(string $endpoint)
@@ -118,6 +134,7 @@ class Client
      * @param string $endpoint
      *
      * @return Response
+     *
      * @throws \Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface
      */
     public function delete(string $endpoint)
@@ -126,51 +143,66 @@ class Client
     }
 
     /**
-     * @return $this
-     */
-    public function throwErrors(): self
-    {
-        $this->throwErrors = true;
-
-        return $this;
-    }
-
-    /**
-     * Yields responses chunk by chunk as they complete.
-     *
-     * @param ResponseInterface|ResponseInterface[]|iterable $responses One or more responses created by the current HTTP client
-     * @param float|null $timeout The idle timeout before yielding timeout chunks
-     *
-     * @return ResponseStreamInterface
-     */
-    public function stream($responses, $timeout = null)
-    {
-        return $this->client->stream($responses, $timeout);
-    }
-
-    /**
-     * Handles the request
-     *
      * @param string $method
      * @param string $endpoint
      *
-     * @return Response
+     * @return mixed|Response
+     *
      * @throws \Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface
      */
     protected function request(string $method, string $endpoint)
     {
-        $response = $this->ignoreConfig
-            ? self::create()->request($method, $endpoint, $this->options)
-            : $this->client->request($method, $endpoint, $this->options);
+        $this->resolvePayload();
 
-        return new Response($response, $this->throwErrors);
+        return Response::createFromResponse(
+            $this->client->request($method, $endpoint, $this->options),
+            $this->throwErrors
+        );
     }
 
     /**
-     * @return \Symfony\Contracts\HttpClient\HttpClientInterface
+     * @param ResponseInterface|ResponseInterface[]|iterable $responses
+     *
+     * @return ResponseStreamInterface
      */
-    protected function buildClient()
+    public function stream($responses): ResponseStreamInterface
+    {
+        return $this->client->stream(
+            collect($responses)->transform(function ($item) {
+                return $item->response();
+            })
+        );
+    }
+
+    /**
+     * @return HttpClientInterface
+     */
+    protected function buildClient(): HttpClientInterface
     {
         return HttpClient::create($this->config->toArray());
+    }
+
+    /**
+     * @return array<String|Array>
+     */
+    public function config(): array
+    {
+        return $this->config->toArray();
+    }
+
+    /**
+     * @return array<mixed>
+     */
+    public function options(): array
+    {
+        return $this->options;
+    }
+
+    /**
+     * @return HttpClientInterface
+     */
+    public function client(): HttpClientInterface
+    {
+        return $this->client;
     }
  }

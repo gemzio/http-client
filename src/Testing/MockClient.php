@@ -39,13 +39,18 @@ class MockClient extends Client
     protected function buildMockInfo()
     {
         $info = array_merge($this->getConfig(), $this->mockInfo);
-        $info['response_headers'] = array_merge($this->getConfig()['headers'], $this->options['headers']);
+        $info['response_headers'] = array_merge(
+            $this->getConfig()['headers'] ?? [],
+            $this->options['headers'] ?? []
+        );
 
         return $info;
     }
 
     protected function request(string $method, string $endpoint)
     {
+        $this->resolvePayload();
+
         $client = new MockHttpClient($this->buildMockResponse(), $this->getBaseUri());
 
         return new Response(
@@ -55,7 +60,7 @@ class MockClient extends Client
 
     protected function mergeConfigAndOptions()
     {
-        $headers = array_merge($this->getConfig()['headers'] ?: [], $this->options['headers'] ?: []);
+        $headers = array_merge($this->getConfig()['headers'] ?? [], $this->options['headers'] ?? []);
         $options = array_merge($this->getConfig(), $this->options);
         $options['headers'] = $headers;
 
@@ -71,14 +76,14 @@ class MockClient extends Client
     {
         $config = $this->config !== null
             ? $this->config->toArray()
-            : Config::build()->toArray();
+            : Config::make()->toArray();
 
         return $config['base_uri'] ?: 'http://localhost.test';
     }
 
     protected function getConfig(): array
     {
-        $config = $this->config !== null ? $this->config : Config::build();
+        $config = $this->config !== null ? $this->config : Config::make();
 
         return $config->toArray();
     }
