@@ -3,7 +3,6 @@
 namespace Gemz\HttpClient\Contracts;
 
 use Gemz\HttpClient\Exceptions\InvalidArgument;
-use Psr\Http\Message\StreamInterface;
 use Symfony\Component\Mime\Part\Multipart\FormDataPart;
 
 trait Options
@@ -20,11 +19,20 @@ trait Options
     /** @var string */
     private static $CONTENT_TYPE_FORM_PARAMS = 'application/x-www-form-urlencoded';
 
-    /** @var array<String> */
-    private $bodyFormats = ['json', 'multipart', 'form_params'];
-
     /** @var string */
     protected static $CUSTOM_DATA_HEADER = 'X-Custom-Data';
+
+    /** @var array<mixed> */
+    protected $options = [];
+
+    /** @var bool */
+    protected $throwErrors = false;
+
+    /** @var array<String> */
+    protected $bodyFormats = ['json', 'multipart', 'form_params'];
+
+    /** @var string */
+    protected $bodyFormat = 'json';
 
     /**
      * Set authentication auth bearer token
@@ -434,23 +442,24 @@ trait Options
     {
         $payload = $this->getOption('payload');
 
-        if (! empty($payload) || $payload == null) {
+        if (! is_array($payload) && $this->payloadMustBeArray()) {
+            throw InvalidArgument::payloadMustBeArray();
+        }
+
+        if (empty($payload) || $payload == null) {
             $this->removeOptions(['body', 'payload']);
+
             return $this;
         }
 
-        if ($this->bodyFormat == 'json' && ! empty($payload)) {
+        if ($this->bodyFormat == 'json') {
             $this->option('json', $payload);
-            $this->throwExceptionWhenPayloadIsNotArray($payload);
             $this->removeOptions(['body', 'payload']);
 
             return $this;
         }
 
-        if ($this->bodyFormat == 'multipart' && !empty($payload)) {
-
-            $this->throwExceptionWhenPayloadIsNotArray($payload);
-
+        if ($this->bodyFormat == 'multipart') {
             $formData = new FormDataPart($payload);
 
             $this->headers($formData->getPreparedHeaders()->toArray());
@@ -460,15 +469,14 @@ trait Options
             return $this;
         }
 
-        if ($this->bodyFormat == 'form_params' && !empty($payload)) {
+        if ($this->bodyFormat == 'form_params') {
             $this->option('body', $payload);
-            $this->throwExceptionWhenPayloadIsNotArray($payload);
             $this->removeOptions(['json', 'payload']);
 
             return $this;
         }
 
-        if ((is_string($payload) && $payload !== '')
+        if (is_string($payload)
             || is_resource($payload)
             || is_callable($payload)) {
 

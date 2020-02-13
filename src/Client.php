@@ -15,17 +15,8 @@ class Client
     /** @var HttpClientInterface */
     protected $client;
 
-    /** @var Config|null */
+    /** @var Config */
     protected $config;
-
-    /** @var array<mixed> */
-    protected $options = [];
-
-    /** @var string */
-    protected $bodyFormat = 'json';
-
-    /** @var bool */
-    protected $throwErrors = false;
 
     /**
      * @param Config|null $config

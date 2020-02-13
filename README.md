@@ -37,7 +37,7 @@ $response = $client
 
 // query params
 $response = $client
-    ->queryParam('page', 23)
+    ->queryParam('page', 20)
     ->get('https://myapi.com/users');
 // calls https://myapi.com/users?page=20
 ````
