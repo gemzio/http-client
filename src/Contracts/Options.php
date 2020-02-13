@@ -442,14 +442,14 @@ trait Options
     {
         $payload = $this->getOption('payload');
 
-        if (! is_array($payload) && $this->payloadMustBeArray()) {
-            throw InvalidArgument::payloadMustBeArray();
-        }
-
         if (empty($payload) || $payload == null) {
             $this->removeOptions(['body', 'payload']);
 
             return $this;
+        }
+
+        if (!is_array($payload) && $this->payloadMustBeArray()) {
+            throw InvalidArgument::payloadMustBeArray();
         }
 
         if ($this->bodyFormat == 'json') {

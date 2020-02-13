@@ -2,6 +2,10 @@
 
 All notable changes to `http-client` will be documented in this file
 
+# 2.2.0 - 2020-02-13
+
+- bugfix payload handling
+
 # 2.1.0 - 2020-02-13
 
 - bugfixes scrutinizer ci
