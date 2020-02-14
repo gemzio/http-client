@@ -7,7 +7,6 @@ use Gemz\HttpClient\Response;
 use Gemz\HttpClient\Config;
 use Gemz\HttpClient\Stream;
 use Gemz\HttpClient\Testing\MockClient;
-use Gemz\HttpClient\Utils;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\TestCase;
 
@@ -182,7 +181,12 @@ class RequestTest extends TestCase
             ->payload(['key' => 'test'])
             ->post('users/1');
 
-        $headers = Utils::normalizeHeaders($client->getMockResponse()->getRequestOptions()['headers']);
+        $headers = [];
+
+        foreach ($client->getMockResponse()->getRequestOptions()['headers'] as $header) {
+            [$name, $value] = explode(':', $header, 2);
+            $headers[$name] = $value;
+        }
 
         $this->assertTrue(
             Str::contains($headers['Content-Type'], 'multipart/form-data')

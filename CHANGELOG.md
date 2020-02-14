@@ -2,6 +2,11 @@
 
 All notable changes to `http-client` will be documented in this file
 
+# 2.3.1 - 2020-02-14
+
+- clean files - delete Utils
+- add options name and contentType to Client::fileHandler
+
 # 2.3.0 - 2020-02-14
 
 - changed payload handling

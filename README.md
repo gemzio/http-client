@@ -255,7 +255,6 @@ for ($i = 1; $i < 300; $i++) {
 }
 
 // Using the Stream Object to access the responses
-
 foreach ($client->stream($responses) as $response => $chunk) {
     Stream::from($response, $chunk)
         ->then(function (Response $response) {
@@ -299,6 +298,7 @@ foreach ($client->stream($response) as $response => $chunk) {
 
 ``` bash
 composer test
+composer phpstan
 composer test-coverage
 ```
 

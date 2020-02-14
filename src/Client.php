@@ -154,12 +154,17 @@ class Client
 
     /**
      * @param string $pathToFile
+     * @param string|null $name
+     * @param string|null $contentType
      *
      * @return DataPart
      */
-    public static function fileHandler(string $pathToFile): DataPart
+    public static function fileHandler(
+        string $pathToFile,
+        string $name = null,
+        string $contentType = null): DataPart
     {
-        return DataPart::fromPath($pathToFile);
+        return DataPart::fromPath($pathToFile, $name, $contentType);
     }
 
     /**

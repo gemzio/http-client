@@ -442,9 +442,10 @@ trait Options
 
         $formData = new FormDataPart($body);
         $headers = $formData->getPreparedHeaders()->toArray();
-        [$name, $value] = explode(':', $headers[0], 2);
 
-        $this->header($name, $value);
+        $header = explode(':', $headers[0], 2);
+
+        $this->header($header[0], $header[1]);
         $this->body($formData->bodyToIterable());
 
         return $this;
