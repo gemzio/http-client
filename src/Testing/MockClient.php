@@ -7,11 +7,15 @@ use Gemz\HttpClient\Config;
 use Gemz\HttpClient\Response;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 class MockClient extends Client
 {
     /** @var MockResponse */
     protected $mockResponse;
+
+    /** @var ResponseInterface */
+    protected $response;
 
     /** @var mixed */
     protected $mockBody;
@@ -50,24 +54,17 @@ class MockClient extends Client
     {
         return new MockResponse(
             $this->mockBody,
-            $this->buildMockInfo()
+            $this->mockInfo
         );
     }
 
     /**
-     * @return array<mixed>
+     * @return ResponseInterface
      */
-    protected function buildMockInfo(): array
+    public function getMockResponse(): ResponseInterface
     {
-        $info = array_merge($this->getConfig(), $this->mockInfo);
-        $info['response_headers'] = array_merge(
-            $this->getConfig()['headers'] ?? [],
-            $this->options['headers'] ?? []
-        );
-
-        return $info;
+        return $this->response;
     }
-
     /**
      * @param string $method
      * @param string $endpoint
@@ -82,9 +79,8 @@ class MockClient extends Client
 
         $client = new MockHttpClient($this->buildMockResponse(), $this->getBaseUri());
 
-        return new Response(
-            $client->request($method, $endpoint, $this->mergeConfigAndOptions())
-        );
+        $this->response = $client->request($method, $endpoint, $this->mergeConfigAndOptions());
+        return new Response($this->response);
     }
 
     /**
@@ -117,9 +113,7 @@ class MockClient extends Client
             ? $this->config->toArray()
             : Config::make()->toArray();
 
-        return isset($config['base_uri']) && is_string($config['base_uri'])
-            ? $config['base_uri']
-            : 'http://localhost.test';
+        return $config['base_uri'] ?? 'http://localhost.test';
     }
 
     /**

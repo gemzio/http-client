@@ -37,7 +37,7 @@ class Config
     /**
      * Config as array
      *
-     * @return array<String|Array>
+     * @return array<mixed>
      */
     public function toArray(): array
     {

@@ -7,9 +7,9 @@ use Gemz\HttpClient\Response;
 use Gemz\HttpClient\Config;
 use Gemz\HttpClient\Stream;
 use Gemz\HttpClient\Testing\MockClient;
+use Gemz\HttpClient\Utils;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\TestCase;
-
 
 class RequestTest extends TestCase
 {
@@ -21,6 +21,20 @@ class RequestTest extends TestCase
     ];
 
     protected $imgUrl = "https://http2.akamai.com/demo/tile-%s.png";
+
+    protected function can_set_payload()
+    {
+        $formData = [
+            'field1' => 'test',
+            'file' => Client::fileHandler(__DIR__ . '/test.md')
+        ];
+
+        $client = Client::create();
+        $client
+            ->asMultipart()
+            ->payload($formData)
+            ->post('https://myapi.com/users');
+    }
 
     /** @test */
     public function can_do_get_requests()
@@ -67,7 +81,7 @@ class RequestTest extends TestCase
 
         $responses = [];
 
-        for ($i = 0; $i < 5; ++$i) {
+        for ($i = 0; $i < 2; ++$i) {
             $responses[] = $client
                 ->customData('req - ' . $i)
                 ->get(sprintf($this->imgUrl, $i));
@@ -83,21 +97,6 @@ class RequestTest extends TestCase
                 ->timeout(function ($response) {})
                 ->catch(function ($exception) {});
         }
-    }
-
-    protected function timer($text)
-    {
-        $times = count($this->timer);
-
-        if ($times == 0) {
-            $this->timer[$text] = round(microtime(true), 4);
-            return;
-        }
-
-        $lastTime = end($this->timer);
-
-        $this->timer[$text] = round(microtime(true),4) - $lastTime;
-        return;
     }
 
     /** @test */
@@ -127,7 +126,10 @@ class RequestTest extends TestCase
             ->header('key', '2')
             ->headers(['filter' => 'test', 'page' => 10]);
 
-        $this->assertArrayHasKey('headers', $client->getRequestOptions());
+        $this->assertArrayHasKey(
+            'headers', $client->getRequestOptions()
+        );
+
         $this->assertSame(
             $client->getRequestOptions()['headers'],
             ['Content-Type' => 'application/json', 'key' => '2', 'filter' => 'test', 'page' => '10']
@@ -138,10 +140,11 @@ class RequestTest extends TestCase
     public function can_send_body_as_string()
     {
         $client = new MockClient(Config::make()
-            ->baseUri('http://myapi.com'));
+            ->baseUri('http://myapi.com')
+            ->asJson());
 
         $client
-            ->asPlainText()
+            ->asString()
             ->payload('test');
 
         $this->assertSame(
@@ -172,23 +175,37 @@ class RequestTest extends TestCase
         $client = new MockClient(Config::make()
             ->baseUri('http://myapi.com'));
 
-        $client->asMultipart();
+        $client->mockBody(['key' => 'test']);
 
-        $this->assertSame(
-            $client->getRequestOptions()['headers']['Content-Type'],
-            'multipart/form-data'
+        $response = $client
+            ->asMultipart()
+            ->payload(['key' => 'test'])
+            ->post('users/1');
+
+        $headers = Utils::normalizeHeaders($client->getMockResponse()->getRequestOptions()['headers']);
+
+        $this->assertTrue(
+            Str::contains($headers['Content-Type'], 'multipart/form-data')
         );
     }
 
     /** @test */
     public function can_send_request_as_form_params()
     {
+        $payload = ['filter' => 'test', 'page' => '10'];
+
         $client = new MockClient(Config::make()
             ->baseUri('http://myapi.com'));
 
         $client
+            ->mockBody($payload)
             ->asFormParams()
-            ->payload(['filter' => 'test', 'page' => '10']);
+            ->payload($payload)
+            ->post('test');
+
+        $this->assertSame($client->getRequestOptions()['body'],
+            ['filter' => 'test', 'page' => '10']
+            );
 
         $this->assertSame(
             $client->getRequestOptions()['headers']['Content-Type'],

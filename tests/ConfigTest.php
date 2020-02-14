@@ -7,17 +7,25 @@ use PHPUnit\Framework\TestCase;
 
 class ConfigTest extends TestCase
 {
+    protected function freshConfig()
+    {
+        return Config::make();
+    }
+
     /** @test */
     public function has_json_as_default()
     {
-        $config = Config::make();
-        $this->assertTrue($config->toArray()['headers']['Content-Type'] == 'application/json');
+        $config = $this->freshConfig();
+
+        $this->assertTrue(
+            $config->toArray()['headers']['Content-Type'] == 'application/json'
+        );
     }
 
     /** @test */
     public function config_has_array_with_one_element()
     {
-        $config = Config::make();
+        $config = $this->freshConfig();
 
         $this->assertEquals(1, count($config->toArray()));
     }

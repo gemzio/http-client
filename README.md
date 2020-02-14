@@ -6,8 +6,9 @@
 [![Total Downloads](https://img.shields.io/packagist/dt/gemz/http-client.svg?style=flat-square)](https://packagist.org/packages/gemz/http-client)
 
 
-Gemz Http Client is a thin Symfony Http-Client wrapper to provide an easy development experience for most use cases.
-Comes with easy to use multiplexing and concurrent requests.
+Gemz Http Client is a thin [Symfony Http-Client](https://github.com/symfony/http-client) wrapper to provide an 
+easy development experience for most use cases. Comes with easy to use asynchronous and concurrent 
+requests.
 
 If you need more functionality, just use [Guzzle](https://github.com/guzzle/guzzle) or 
 [Symfony](https://github.com/symfony/http-client) clients.
@@ -35,7 +36,7 @@ $response = $client
     ->payload(['name' => 'John'])
     ->post('https://myapi.com/users');
 
-// query params
+// query url parameters
 $response = $client
     ->queryParam('page', 20)
     ->get('https://myapi.com/users');
@@ -49,29 +50,28 @@ client object unless you override the options in the request itself.
 
 ```php
 use Gemz\HttpCLient\Client;
+use Gemz\HttpCLient\Config;
 
 // Basic client with no config options
 $client = Client::create();
 $client = new Client();
 
 // Client with config options
-$config = Config::build()
-    ->header('X-API-KEY', 'yourkey')
+$config = Config::make()
+    ->header('API-KEY', 'yourkey')
     ->baseUri('https://myapi.com');
     
-$client = Client::create($config);
-$resopnse = $client->get('users');
+$response = Client::create($config)->get('users');
 ```
 
-> All options are equal on client initialization and request itself. If you use the same option in config and the 
-request, the request option will override the config option.  
+> All possible options are identical in configuration and request. If you use the same option in config and the 
+request, the request option will override the config option.
 
 That is great when you have to use different options in some requests other than in the config.
 
 ````php
 $client = Client::create(Config::make()->header('X-KEY', 'yourkey'));
 
-// use a different header
 $response = $client->header('X-KEY', 'otherkey')->get('users');
 ````
 
@@ -87,54 +87,55 @@ There are some default settings:
 
 ## Configuration And Request Options
 
-> Be aware that all requests are made `asynchronous`.
-
 ```php
 // Authentication
-$client->authBasic('<username', '<password');
-$client->authBearer('<token');
+$client->authBasic('username', 'password');
+$client->authBearer('token');
 
 // Headers
-$client->header('<key>', '<value');
-$client->headers(['<key>' => 'value']);
-
-// Content-Type
-$client->contentType('<contentType');
+$client->header('key', 'value');
+$client->headers(['key' => 'value']);
 
 // User-Agent
-$client->userAgent('<userAgent');
+$client->userAgent('userAgent');
 
 // Query Parameters
-// Will result in ?key=value&key1=value1 ...
-$client->queryParam('<key>', '<value');
-$client->queryParams(['<key>' => 'value']);
+$client->queryParam('key', 'value');
+$client->queryParams(['key1' => 'value1']);
+// will result in ...?key=value&key1=value1
 
-// Timeout
-$client->timeout(<float>);
+// Timeout in seconds
+$client->timeout(10);
 
 // Max Redirects
 // 0 means unlimited
-$client->allowRedirects(<integer>);
+$client->allowRedirects(3);
 $client->doNotAllowRedirects();
 
 // Max Request <-> Response Duration
-$client->maxDuration(<float>);
+// in seconds
+$client->maxDuration(30);
 
 // Throw errors if response status code is >= 400
 $client->throwErrors();
 
-// Body Formats
-// Default json
+// Content-Types
+$client->contentType('contentType');
 $client->asJson();
 $client->asFormParams();
-$client->asMultipart();
 $client->asPlain();
+$client->asMultipart();
 
-// Payload - Depends On Body Format
 // Multipart form data will automatically transformed in the correct format
 // throws an exception if content-type and payload does not match
-$client->payload(['<key>' => '<value']);
+$client->payload(['key' => 'value']);
 $client->payload('my message');
+
+// payload for multipart
+$client->payload([
+    'key' => 'value',
+    'file_field' => Client::fileHandler('pathToFile')
+]);
 
 // without verifing ssl
 // Default is verifing
@@ -179,10 +180,10 @@ $response = $client->get('users/1');
 // Content Access
 $response->asArray(); // if content is json
 $response->asObject(); // if content is json
+$response->asCollection(); // if content is json - illuminate collection
 $response->asString();
 $response->asStream(); // php resource
-$response->body(); // same as asString()
-$response->asCollection(); // // if content is json - illuminate collection
+$response->body();
 
 // Status Code
 $response->status(); // integer
@@ -218,21 +219,19 @@ $response->response();
 
 ```
 
-## Asynchronous Requests
+## Asynchronous And Concurrent Requests
 
 Since all requests are asynchronous, you can put requests in an array and get the response later.
 In this case the foreach loop get responses in order of the requests.
 
 ```php
-$client = Client::create(
-    Config::build()->baseUri('https://myapi.com')
-);
+$client = Client::create();
 
 $responses = [];
 
-$responses[] = $client->get(sprintf($this->imgUrl, 2));
-$responses[] = $client->get(sprintf($this->imgUrl, 3));
-$responses[] = $client->get(sprintf($this->imgUrl, 4));
+$responses[] = $client->get('users/1');
+$responses[] = $client->get('users/2'));
+$responses[] = $client->get('users/3');
 
 // responses are in order of the requests
 foreach ($responses as $response) {
@@ -240,18 +239,17 @@ foreach ($responses as $response) {
 }
 ```
 
-If you do not know the ~ execution time of the request and have a lot of requests, this approach is much better and 
+If you do have a lot of requests, this approach is much better and 
 faster. The order of the responses is then independent of the request order. `This is fully asynchronous`.  
 
 ```php
-$client = Client::create(
-    Config::build()->baseUri('https://myapi.com')
-);
+$client = Client::create();
 
 $responses = [];
 
 for ($i = 1; $i < 300; $i++) {
     $responses[] = $client
+        // using custom data to identify the request in the response
         ->customData('id:' . $i)
         ->get("users/{$i}");
 }
@@ -262,6 +260,7 @@ foreach ($client->stream($responses) as $response => $chunk) {
     Stream::from($response, $chunk)
         ->then(function (Response $response) {
             // success - do something with the response
+            echo $response->customData()
         })
         ->timeout(function (Response $response) {
             // timeout - do something with the response        

@@ -3,6 +3,7 @@
 namespace Gemz\HttpClient;
 
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 class Response
@@ -194,6 +195,8 @@ class Response
      */
     public function header(string $header)
     {
+        $header = Str::lower($header);
+
         if (array_key_exists($header, $this->headers())) {
             return $this->headers()[$header];
         }

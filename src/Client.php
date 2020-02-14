@@ -4,6 +4,7 @@ namespace Gemz\HttpClient;
 
 use Gemz\HttpClient\Contracts\Options;
 use Symfony\Component\HttpClient\HttpClient;
+use Symfony\Component\Mime\Part\DataPart;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Symfony\Contracts\HttpClient\ResponseStreamInterface;
@@ -152,6 +153,16 @@ class Client
     }
 
     /**
+     * @param string $pathToFile
+     *
+     * @return DataPart
+     */
+    public static function fileHandler(string $pathToFile): DataPart
+    {
+        return DataPart::fromPath($pathToFile);
+    }
+
+    /**
      * @param ResponseInterface|ResponseInterface[]|iterable $responses
      *
      * @return ResponseStreamInterface
@@ -196,4 +207,4 @@ class Client
     {
         return $this->client;
     }
- }
+}

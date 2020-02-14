@@ -29,7 +29,12 @@ trait Options
     protected $throwErrors = false;
 
     /** @var array<String> */
-    protected $bodyFormats = ['json', 'multipart', 'form_params'];
+    protected $bodyFormats = [
+        'json' => 'json',
+        'multipart' => 'body',
+        'form_params' => 'body',
+        'string' => 'body',
+    ];
 
     /** @var string */
     protected $bodyFormat = 'json';
@@ -318,45 +323,48 @@ trait Options
     }
 
     /**
+     * Set the content type and body format for strings
      * @return $this
      */
-    public function asPlainText()
+    public function asString()
     {
-        $this->bodyFormat('body');
-
-        return $this->contentType(self::$CONTENT_TYPE_PLAIN);
+        return $this
+            ->bodyFormat('string')
+            ->contentType(self::$CONTENT_TYPE_PLAIN);
     }
 
     /**
+     * Set the content type and body format json
+     *
      * @return $this
      */
     public function asJson(): self
     {
-        $this->bodyFormat('json');
-
-        return $this->contentType(self::$CONTENT_TYPE_JSON);
+        return $this
+            ->bodyFormat('json')
+            ->contentType(self::$CONTENT_TYPE_JSON);
     }
 
     /**
+     * Set the content type and body format form params
+     *
      * @return $this
      */
     public function asFormParams(): self
     {
-        $this->bodyFormat('form_params');
-
-        return $this->contentType(self::$CONTENT_TYPE_FORM_PARAMS);
+        return $this
+            ->bodyFormat('form_params')
+            ->contentType(self::$CONTENT_TYPE_FORM_PARAMS);
     }
 
     /**
-     * Set the content type multipart form-data
+     * Set the content type and body format multipart form-data
      *
      * @return $this
      */
     public function asMultipart(): self
     {
-        $this->bodyFormat('multipart');
-
-        return $this->contentType(self::$CONTENT_TYPE_MULTIPART);
+        return $this->bodyFormat('multipart');
     }
 
     /**
@@ -386,35 +394,7 @@ trait Options
     }
 
     /**
-     * Indicates if the payload must be an array
-     * depending on body format
-     *
-     * @return bool
-     */
-    protected function payloadMustBeArray(): bool
-    {
-        return in_array(
-            $this->bodyFormat,
-            $this->bodyFormats
-        );
-    }
-
-    /**
-     * @param mixed $payload
-     *
-     * @return $this
-     */
-    protected function throwExceptionWhenPayloadIsNotArray($payload): self
-    {
-        if (! is_array($payload)) {
-            throw InvalidArgument::payloadMustBeArray();
-        }
-
-        return $this;
-    }
-
-    /**
-     * Set any payload text, array
+     * Set any payload text, array, resource, callable ...
      *
      * @param mixed $payload
      *
@@ -422,7 +402,7 @@ trait Options
      */
     public function payload($payload): self
     {
-        return $this->option('payload', $payload);
+        return $this->option('body', $payload);
     }
 
     /**
@@ -438,55 +418,76 @@ trait Options
     /**
      * @return $this
      */
-    protected function resolvePayload(): self
+    protected function resolveJsonPayload(): self
     {
-        $payload = $this->getOption('payload');
+        $body = $this->getOption('body');
 
-        if (empty($payload) || $payload == null) {
-            $this->removeOptions(['body', 'payload']);
-
-            return $this;
+        if (! empty($body) && is_array($body)) {
+            $this->option('body', json_encode($body));
         }
 
-        if (!is_array($payload) && $this->payloadMustBeArray()) {
+        return $this;
+    }
+
+    /**
+     * @return $this
+     */
+    public function resolveMultipartPayload(): self
+    {
+        $body = $this->getOption('body');
+
+        if (! is_array($body) || ! is_iterable($body)) {
             throw InvalidArgument::payloadMustBeArray();
         }
 
-        if ($this->bodyFormat == 'json') {
-            $this->option('json', $payload);
-            $this->removeOptions(['body', 'payload']);
+        $formData = new FormDataPart($body);
+        $headers = $formData->getPreparedHeaders()->toArray();
+        [$name, $value] = explode(':', $headers[0], 2);
 
-            return $this;
+        $this->header($name, $value);
+        $this->body($formData->bodyToIterable());
+
+        return $this;
+    }
+
+    /**
+     * @return $this
+     */
+    public function resolveFormParamsPayload(): self
+    {
+        $body = $this->getOption('body');
+
+        if (!is_array($body) || !is_iterable($body)) {
+            throw InvalidArgument::payloadMustBeArray();
         }
 
-        if ($this->bodyFormat == 'multipart') {
-            $formData = new FormDataPart($payload);
+        return $this;
+    }
 
-            $this->headers($formData->getPreparedHeaders()->toArray());
-            $this->option('body', $formData->bodyToIterable());
-            $this->removeOptions(['json', 'payload']);
+    /**
+     * resolve the payload
+     * if body format is json then payload value must be json encoded
+     *
+     * @return $this
+     */
+    protected function resolvePayload(): self
+    {
+        $bodyFormat = $this->getBodyFormat();
 
-            return $this;
+
+        if ($bodyFormat == 'json') {
+            $this->resolveJsonPayload();
         }
 
-        if ($this->bodyFormat == 'form_params') {
-            $this->option('body', $payload);
-            $this->removeOptions(['json', 'payload']);
-
-            return $this;
+        if ($bodyFormat == 'multipart') {
+            $this->resolveMultipartPayload();
         }
 
-        if (is_string($payload)
-            || is_resource($payload)
-            || is_callable($payload)) {
-
-            $this->option('body', $payload);
-            $this->removeOptions(['json', 'payload']);
-
-            return $this;
-        } else {
-            throw InvalidArgument::payloadAndBodyFormatNotCompatible($this->bodyFormat);
+        if ($bodyFormat == 'form_params') {
+            $this->resolveFormParamsPayload();
         }
+
+        return $this;
     }
 
     /**
@@ -530,5 +531,4 @@ trait Options
     {
         return $this->option('body', $body);
     }
-
 }
